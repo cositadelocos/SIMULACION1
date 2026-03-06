@@ -28,6 +28,12 @@
       background-color: transparent; /* Transparente para no tapar la cámara AR */
     }
 
+    /* ¡CLAVE! Prevenir que Tailwind aplaste el video de MindAR con su max-width: 100% por defecto */
+    video, .a-canvas {
+      max-width: none !important;
+      max-height: none !important;
+    }
+
     /* Efectos tipo "Glassmorphism" comunes en diseños modernos (como el portal de Tailwind) */
     .glass {
       background: rgba(15, 23, 42, 0.7);
