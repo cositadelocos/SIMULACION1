@@ -1,102 +1,292 @@
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Scripts de A-Frame y MindAR -->
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
-    
-    <title>Museo AR - Búsqueda de Pistas</title>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #ui-container {
-        position: absolute;
-        bottom: 20px;
-        width: 100%;
-        text-align: center;
-        z-index: 10;
-        display: none;
-      }
-      .btn {
-        padding: 10px 20px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        border: 2px solid white;
-        border-radius: 10px;
-        font-family: sans-serif;
-        font-size: 16px;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- ui-container para mostrar mensajes o botones -->
-    <div id="ui-container">
-      <button class="btn" id="info-btn">Identificado: Guía Activo</button>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Museo Interactivo - Experiencia AR</title>
+
+  <!-- Scripts de A-Frame y MindAR -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
+  
+  <!-- Script para Model Viewer (Permite explorar en 3D libremente) -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #000;
+    }
+
+    /* --- PANTALLA DE INICIO --- */
+    #start-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
+      z-index: 2000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      text-align: center;
+      transition: opacity 0.5s ease-out;
+    }
+    .start-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 40px 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 85%;
+    }
+    .start-card h1 {
+      margin-top: 0;
+      font-size: 32px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      color: #dfba70; /* Color museográfico dorado */
+    }
+    .start-card p {
+      font-size: 16px;
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+    #start-btn {
+      background: #dfba70;
+      color: #111;
+      font-weight: bold;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(223, 186, 112, 0.4);
+      transition: all 0.2s;
+    }
+    #start-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* --- INSTRUCCIÓN FLOTANTE "Busca una pieza" --- */
+    #instruction-banner {
+      position: absolute;
+      top: 30px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      color: #dfba70;
+      padding: 12px 25px;
+      border-radius: 30px;
+      z-index: 1500;
+      font-size: 18px;
+      font-weight: bold;
+      display: none; /* Se oculta por defecto */
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      white-space: nowrap;
+      border: 1px solid rgba(223, 186, 112, 0.3);
+      animation: float 2s infinite ease-in-out;
+    }
+    @keyframes float {
+      0% { transform: translate(-50%, 0); }
+      50% { transform: translate(-50%, -5px); }
+      100% { transform: translate(-50%, 0); }
+    }
+
+    /* --- CONTROLES AR (cuando entra el archivo) --- */
+    #ui-container {
+      position: absolute;
+      bottom: 40px;
+      width: 100%;
+      text-align: center;
+      z-index: 500;
+      display: none;
+    }
+    .status-text {
+      display: inline-block;
+      padding: 10px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border-radius: 50px;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+    #explore-btn {
+      background: #dfba70;
+      border: none;
+      color: #111;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 4px 15px rgba(223, 186, 112, 0.5);
+      cursor: pointer;
+      pointer-events: auto; /* IMPORTANTE */
+    }
+    #explore-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* --- VISOR 3D (para explorar pieza sin AR) --- */
+    #viewer-container {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle, #222 0%, #000 100%);
+      z-index: 3000;
+      display: none; /* Oculto inicialmente */
+      flex-direction: column;
+    }
+    #back-btn {
+      position: absolute;
+      top: 20px; left: 20px;
+      z-index: 3010;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+    }
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      outline: none;
+      --poster-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audios de la aplicación -->
+  <audio id="inicioAudio" src="./inicio.mp3" preload="auto"></audio>
+  <audio id="guiaAudio" src="./traje.mp3" preload="auto"></audio>
+
+  <!-- PANTALLA DE INICIO (El usuario ve esto primero al abrir la Web) -->
+  <div id="start-screen">
+    <div class="start-card">
+      <h1>Descubre el Pasado</h1>
+      <p>Bienvenido. Inicia la experiencia inmersiva del museo; escucha atentamente y busca las piezas clave.</p>
+      <button id="start-btn">Comenzar la experiencia</button>
     </div>
+  </div>
 
-    <!-- Escena AR interactiva -->
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
-             color-space="sRGB" 
-             renderer="colorManagement: true, physicallyCorrectLights" 
-             vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-             
-      <a-assets>
-        <!-- Tu modelo 3D -->
-        <a-asset-item id="piezaModel" src="./modelo.glb"></a-asset-item>
-        
-        <!-- Audio pregrabado del guía -->
-        <audio id="guiaAudio" src="./traje.mp3" preload="auto"></audio>
-      </a-assets>
+  <!-- INSTRUCCIÓN FLOTANTE (Aparece tras darle a comenzar) -->
+  <div id="instruction-banner">🔍 Busca una pieza en la sala...</div>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <!-- UI DURANTE LA REALIDAD AUMENTADA (Aparece al detectar imagen) -->
+  <div id="ui-container">
+    <div class="status-text" id="status-text">▶ Guía: Reproduciendo historia...</div>
+    <br>
+    <button id="explore-btn">🔎 Explorar Pieza 3D</button>
+  </div>
 
-      <!-- Target de Imagen 0 (El primer target del archivo .mind) -->
-      <a-entity mindar-image-target="targetIndex: 0" id="target-entity">
-        <!-- El Modelo 3D se ubica aquí -->
-        <a-gltf-model rotation="0 0 0 " position="0 0 0" scale="0.5 0.5 0.5" src="#piezaModel" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000"></a-gltf-model>
-      </a-entity>
-    </a-scene>
+  <!-- VISOR 3D INTERACTIVO (Para que el usuario lo mueva con los dedos) -->
+  <!-- Al estar encima, pausa el video de la cámara visualmente pero no los audios -->
+  <div id="viewer-container">
+    <button id="back-btn">⬅ Volver a la cámara</button>
+    <!-- auto-rotate, camera-controls permite que el usuario manipule, acerque y aleje -->
+    <model-viewer src="./modelo.glb" 
+                  camera-controls 
+                  auto-rotate 
+                  shadow-intensity="1" 
+                  exposure="1">
+    </model-viewer>
+  </div>
 
-    <script>
-      const targetEntity = document.querySelector('#target-entity');
-      const uiContainer = document.querySelector('#ui-container');
-      let yaHablo = false;
+  <!-- LA ESCENA DE REALIDAD AUMENTADA (A-Frame + MindAR) -->
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+           color-space="sRGB" 
+           renderer="colorManagement: true, physicallyCorrectLights" 
+           vr-mode-ui="enabled: false" 
+           device-orientation-permission-ui="enabled: false">
+           
+    <a-assets>
+      <a-asset-item id="piezaModel" src="./modelo.glb"></a-asset-item>
+    </a-assets>
 
-      // Detectar cuando la cámara encuentra la imagen
-      targetEntity.addEventListener("targetFound", event => {
-        console.log("¡Imagen encontrada!");
-        uiContainer.style.display = 'block';
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        // Evitar que hable múltiples veces si la cámara parpadea
-        if (!yaHablo) {
-          const guiaAudio = document.querySelector('#guiaAudio');
-          // Iniciar el audio cuando se detecta el objetivo
-          guiaAudio.play().catch(e => console.error("Error al reproducir audio:", e));
-          
-          document.querySelector('#info-btn').innerText = "Guía: Reproduciendo historia...";
-          yaHablo = true;
-        }
-      });
+    <a-entity mindar-image-target="targetIndex: 0" id="target-entity">
+      <!-- Se ha escalado 2 VECES el modelo (antes: 0.5, ahora: 1.0) -->
+      <a-gltf-model rotation="0 0 0" 
+                    position="0 0 0" 
+                    scale="1 1 1" 
+                    src="#piezaModel" 
+                    animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
+      </a-gltf-model>
+    </a-entity>
+  </a-scene>
 
-      // Detectar cuando la imagen se pierde de vista
-      targetEntity.addEventListener("targetLost", event => {
-        console.log("Imagen perdida.");
-        // Opcional: pausar el audio o esconder UI
-      });
+  <!-- LÓGICA DE INTERACCIÓN -->
+  <script>
+    // Referencias a los elementos
+    const startScreen = document.getElementById('start-screen');
+    const startBtn = document.getElementById('start-btn');
+    const instructionBanner = document.getElementById('instruction-banner');
+    
+    const targetEntity = document.getElementById('target-entity');
+    const uiContainer = document.getElementById('ui-container');
+    const exploreBtn = document.getElementById('explore-btn');
+    
+    const viewerContainer = document.getElementById('viewer-container');
+    const backBtn = document.getElementById('back-btn');
 
-      // Función que usa IA local del dispositivo (Texto a Voz)
-      function hablarIA(texto) {
-        if ('speechSynthesis' in window) {
-          const mensaje = new SpeechSynthesisUtterance();
-          mensaje.text = texto;
-          mensaje.lang = 'es-ES'; // Idioma español
-          mensaje.rate = 0.9; // Velocidad de lectura
-          mensaje.pitch = 1.2; // Tono (para darle personalidad)
-          
-          window.speechSynthesis.speak(mensaje);
-        } else {
-          console.warn("Lo siento, tu navegador no soporta sintetizador de voz.");
-        }
+    // Audios
+    const inicioAudio = document.getElementById('inicioAudio');
+    const guiaAudio = document.getElementById('guiaAudio');
+
+    let guiaActivado = false;
+
+    // 1. Al presionar "Comenzar la experiencia"
+    startBtn.addEventListener('click', () => {
+      // Reproducir audio "inicio.mp3"
+      inicioAudio.play().catch(e => console.log('Error reproduciendo inicio:', e));
+
+      // Quitar pantalla de inicio gradualmente
+      startScreen.style.opacity = '0';
+      setTimeout(() => {
+        startScreen.style.display = 'none';
+        // Mostrar instrucción de buscar
+        instructionBanner.style.display = 'block';
+      }, 500);
+    });
+
+    // 2. Al detectar la imagen objetivo (`targets.mind`) en la cámara
+    targetEntity.addEventListener("targetFound", () => {
+      // Ocultar mensaje flotante
+      instructionBanner.style.display = 'none';
+      
+      // Mostrar botones de AR ("Explorar Pieza")
+      uiContainer.style.display = 'block';
+
+      // Reproducir historia solo si no se ha reproducido ya
+      if (!guiaActivado) {
+        guiaAudio.play().catch(e => console.log('Error reproduciendo historia:', e));
+        guiaActivado = true;
       }
-    </script>
-  </body>
+    });
+
+    targetEntity.addEventListener("targetLost", () => {
+      // Ocultar los botones si la cámara ya no ve la imagen
+      uiContainer.style.display = 'none';
+      // Solo volver a mostrar banner si aun quieres que busquen
+      // instructionBanner.style.display = 'block';
+    });
+
+    // 3. Al presionar "Explorar Pieza 3D" en modo AR
+    exploreBtn.addEventListener('click', () => {
+      // Se sobrepone el visor 3D pero SIN pausar el audio de ambiente/historia
+      viewerContainer.style.display = 'flex';
+    });
+
+    // 4. Al presionar "Volver a la cámara" en el visor 3D
+    backBtn.addEventListener('click', () => {
+      viewerContainer.style.display = 'none';
+    });
+  </script>
+</body>
 </html>
